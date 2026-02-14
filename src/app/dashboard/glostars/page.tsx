@@ -2,15 +2,13 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, type Timestamp } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Check, Gavel, KeyRound } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
@@ -20,19 +18,18 @@ type User = {
   handle?: string;
   fullName?: string;
   profilePictureUrl?: string;
-  followers?: number;
   isVerified?: boolean;
   isBanned?: boolean;
   email?: string;
+  createdAt?: Timestamp;
+  manualPassword?: string;
 };
 
-export default function GloStarsPage() {
+export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [newPassword, setNewPassword] = useState('');
-  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [passwords, setPasswords] = useState<{[key: string]: string}>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -59,29 +56,46 @@ export default function GloStarsPage() {
 
   const handleVerify = async (user: User) => {
     const userRef = doc(db, 'users', user.id);
-    await updateDoc(userRef, { isVerified: !user.isVerified });
-    toast({
-      title: "Success",
-      description: `${user.fullName} has been ${!user.isVerified ? 'verified' : 'unverified'}.`,
-    });
+    try {
+        await updateDoc(userRef, { isVerified: !user.isVerified });
+        toast({
+        title: "Success",
+        description: `${user.fullName} has been ${!user.isVerified ? 'verified' : 'unverified'}.`,
+        });
+    } catch (error) {
+        console.error("Error updating user verification:", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: `Could not update verification for ${user.fullName}.`
+        });
+    }
   };
 
   const handleBan = async (user: User) => {
     const userRef = doc(db, 'users', user.id);
-    await updateDoc(userRef, { isBanned: !user.isBanned });
-    toast({
-      title: "Success",
-      description: `${user.fullName} has been ${!user.isBanned ? 'banned' : 'unbanned'}.`,
-    });
+    try {
+        await updateDoc(userRef, { isBanned: !user.isBanned });
+        toast({
+        title: "Success",
+        description: `${user.fullName} has been ${!user.isBanned ? 'banned' : 'unbanned'}.`,
+        });
+    } catch (error) {
+        console.error("Error updating user ban status:", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: `Could not update ban status for ${user.fullName}.`
+        });
+    }
   };
 
-  const openPasswordDialog = (user: User) => {
-    setSelectedUser(user);
-    setIsPasswordDialogOpen(true);
-    setNewPassword('');
-  };
+  const handlePasswordInputChange = (userId: string, value: string) => {
+    setPasswords(prev => ({...prev, [userId]: value}));
+  }
 
-  const handleResetPassword = () => {
+  const handleForceReset = async (userId: string, handle?: string) => {
+    const newPassword = passwords[userId];
     if (!newPassword) {
       toast({
         variant: 'destructive',
@@ -90,14 +104,24 @@ export default function GloStarsPage() {
       });
       return;
     }
-    // Admin password reset requires a backend with Admin SDK.
-    // This is a placeholder for the UI.
-    console.log(`Resetting password for ${selectedUser?.fullName} to ${newPassword}`);
-    toast({
-      title: 'Action Required',
-      description: 'Password reset functionality requires a backend implementation with Firebase Admin SDK.',
-    });
-    setIsPasswordDialogOpen(false);
+
+    const userRef = doc(db, 'users', userId);
+    try {
+      await updateDoc(userRef, { manualPassword: newPassword });
+      toast({
+        title: 'Success',
+        description: `Password for @${handle} has been manually updated.`,
+      });
+      // Clear password input after reset
+      setPasswords(prev => ({...prev, [userId]: ''}));
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not reset password.',
+      });
+    }
   };
 
   const filteredUsers = useMemo(() => {
@@ -119,12 +143,23 @@ export default function GloStarsPage() {
     return name?.split(' ').map(n => n[0]).join('').toUpperCase() || '';
   }
 
+  const formatDate = (timestamp: Timestamp | undefined) => {
+    if (!timestamp) return 'N/A';
+    try {
+        // Firestore Timestamps can be converted to JS Date objects
+        return timestamp.toDate().toLocaleDateString();
+    } catch (e) {
+        // if it's already a string or something else.
+        return 'N/A';
+    }
+  }
+
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight">GloStars Management</h1>
+      <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
       <Card className="border-primary/20 bg-card shadow-lg shadow-primary/5">
         <CardHeader>
-          <CardTitle>User Management</CardTitle>
+          <CardTitle>All Users</CardTitle>
           <CardDescription>View, edit, and manage user profiles. Found {filteredUsers.length} users.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -141,29 +176,40 @@ export default function GloStarsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[80px]">Avatar</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead className="hidden md:table-cell">Followers</TableHead>
+                  <TableHead className="w-[200px]">User</TableHead>
+                  <TableHead className="hidden sm:table-cell">Email</TableHead>
+                  <TableHead className="hidden md:table-cell">Join Date</TableHead>
                   <TableHead className="hidden sm:table-cell">Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>Actions</TableHead>
+                  <TableHead className="min-w-[280px]">Password Reset</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      <TableCell><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
                       <TableCell>
-                        <Skeleton className="h-4 w-40 mb-2" />
-                        <Skeleton className="h-3 w-32" />
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="h-10 w-10 rounded-full" />
+                          <div>
+                            <Skeleton className="h-4 w-24 mb-1" />
+                            <Skeleton className="h-3 w-16" />
+                          </div>
+                        </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-12" /></TableCell>
+                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
                       <TableCell className="hidden sm:table-cell"><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Skeleton className="h-8 w-8 rounded-md" />
-                          <Skeleton className="h-8 w-8 rounded-md" />
-                          <Skeleton className="h-8 w-8 rounded-md" />
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Skeleton className="h-9 w-9 rounded-md" />
+                          <Skeleton className="h-9 w-9 rounded-md" />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                            <Skeleton className="h-9 w-full" />
+                            <Skeleton className="h-9 w-28" />
                         </div>
                       </TableCell>
                     </TableRow>
@@ -172,36 +218,50 @@ export default function GloStarsPage() {
                   filteredUsers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell>
-                        <Avatar>
-                          <AvatarImage src={user.profilePictureUrl} alt={user.fullName} />
-                          <AvatarFallback>{getInitials(user.fullName)}</AvatarFallback>
-                        </Avatar>
+                        <div className="flex items-center gap-3">
+                            <Avatar>
+                            <AvatarImage src={user.profilePictureUrl} alt={user.fullName} />
+                            <AvatarFallback>{getInitials(user.fullName)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <div className="font-medium">{user.fullName || 'N/A'}</div>
+                                <div className="text-sm text-muted-foreground">@{user.handle || 'N/A'}</div>
+                            </div>
+                        </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="font-medium">{user.fullName || 'N/A'}</div>
-                        <div className="text-sm text-muted-foreground">@{user.handle || 'N/A'}</div>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">{user.followers?.toLocaleString() ?? '0'}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{user.email || 'N/A'}</TableCell>
+                      <TableCell className="hidden md:table-cell">{formatDate(user.createdAt)}</TableCell>
                       <TableCell className="hidden sm:table-cell">{getStatus(user)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1 sm:gap-2">
+                      <TableCell>
+                        <div className="flex justify-start gap-1">
                           <Button variant="ghost" size="icon" onClick={() => handleVerify(user)} title="Verify User">
                             <Check className={`h-4 w-4 ${user.isVerified ? 'text-verified' : 'text-muted-foreground'}`} />
                           </Button>
                           <Button variant="ghost" size="icon" onClick={() => handleBan(user)} title="Ban User">
                             <Gavel className={`h-4 w-4 ${user.isBanned ? 'text-destructive' : 'text-muted-foreground'}`} />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => openPasswordDialog(user)} title="Reset Password">
-                            <KeyRound className="h-4 w-4 text-muted-foreground" />
-                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                            <Input 
+                                type="password" 
+                                placeholder="New Password"
+                                value={passwords[user.id] || ''}
+                                onChange={(e) => handlePasswordInputChange(user.id, e.target.value)}
+                            />
+                            <Button size="sm" onClick={() => handleForceReset(user.id, user.handle)}>
+                                <KeyRound className="h-4 w-4 md:mr-2"/> 
+                                <span className="hidden md:inline">Force Reset</span>
+                            </Button>
                         </div>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      No users found for your search.
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      No users found.
                     </TableCell>
                   </TableRow>
                 )}
@@ -210,35 +270,6 @@ export default function GloStarsPage() {
           </div>
         </CardContent>
       </Card>
-      
-      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reset Password for {selectedUser?.fullName}</DialogTitle>
-            <DialogDescription>
-              Enter a new password for @{selectedUser?.handle}. This action should be used with caution. The user will not be notified of this change.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="new-password" className="text-right">
-                New Password
-              </Label>
-              <Input
-                id="new-password"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPasswordDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleResetPassword}>Set Password</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
