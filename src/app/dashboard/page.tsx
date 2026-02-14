@@ -49,11 +49,11 @@ export default function DashboardPage() {
 
     const fetchUsers = async () => {
         try {
-            const snapshot = await getDocs(collection(db, 'users'));
+            const snapshot = await getDocs(collection(db, 'channels'));
             setUserCount(snapshot.size);
-            console.log('Found users:', snapshot.docs.map(doc => doc.data()));
+            console.log('Found channels:', snapshot.docs.map(doc => doc.data()));
         } catch (error) {
-            console.error("Error fetching users:", error);
+            console.error("Error fetching channels:", error);
             setUserCount(0);
         }
     };

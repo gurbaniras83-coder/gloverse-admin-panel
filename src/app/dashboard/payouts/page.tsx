@@ -52,7 +52,7 @@ export default function PayoutsPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const requestsQuery = query(collection(db, 'users'), where('payoutRequested', '==', true));
+    const requestsQuery = query(collection(db, 'channels'), where('payoutRequested', '==', true));
     const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
       const requestsData = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -87,7 +87,7 @@ export default function PayoutsPage() {
   }, [toast]);
 
   const handleApprove = async (request: PayoutRequest) => {
-    const userRef = doc(db, 'users', request.id);
+    const userRef = doc(db, 'channels', request.id);
     const amountToPay = request.payoutRequestAmount || 0;
 
     if ((request.walletBalance || 0) < amountToPay) {
@@ -109,7 +109,7 @@ export default function PayoutsPage() {
   };
 
   const handleReject = async (request: PayoutRequest) => {
-    const userRef = doc(db, 'users', request.id);
+    const userRef = doc(db, 'channels', request.id);
     try {
       await updateDoc(userRef, {
         payoutStatus: 'Rejected',
@@ -220,3 +220,4 @@ export default function PayoutsPage() {
   );
 
     
+

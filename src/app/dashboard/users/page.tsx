@@ -22,7 +22,7 @@ type User = {
   isBanned?: boolean;
   email?: string;
   createdAt?: Timestamp;
-  manualPassword?: string;
+  password?: string;
 };
 
 export default function UsersPage() {
@@ -33,7 +33,7 @@ export default function UsersPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const usersCol = collection(db, 'users');
+    const usersCol = collection(db, 'channels');
     const unsubscribe = onSnapshot(usersCol, (snapshot) => {
       const usersData = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -42,12 +42,12 @@ export default function UsersPage() {
       setUsers(usersData);
       setLoading(false);
     }, (error) => {
-      console.error("Error fetching users:", error);
+      console.error("Error fetching channels:", error);
       setLoading(false);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to fetch users.",
+        description: "Failed to fetch channels.",
       });
     });
 
@@ -55,7 +55,7 @@ export default function UsersPage() {
   }, [toast]);
 
   const handleVerify = async (user: User) => {
-    const userRef = doc(db, 'users', user.id);
+    const userRef = doc(db, 'channels', user.id);
     try {
         await updateDoc(userRef, { isVerified: !user.isVerified });
         toast({
@@ -73,7 +73,7 @@ export default function UsersPage() {
   };
 
   const handleBan = async (user: User) => {
-    const userRef = doc(db, 'users', user.id);
+    const userRef = doc(db, 'channels', user.id);
     try {
         await updateDoc(userRef, { isBanned: !user.isBanned });
         toast({
@@ -105,9 +105,9 @@ export default function UsersPage() {
       return;
     }
 
-    const userRef = doc(db, 'users', userId);
+    const userRef = doc(db, 'channels', userId);
     try {
-      await updateDoc(userRef, { manualPassword: newPassword });
+      await updateDoc(userRef, { password: newPassword });
       toast({
         title: 'Success',
         description: `Password for @${handle} has been manually updated.`,
@@ -183,7 +183,7 @@ export default function UsersPage() {
                   <TableHead className="hidden md:table-cell">Join Date</TableHead>
                   <TableHead className="hidden sm:table-cell">Status</TableHead>
                   <TableHead>Actions</TableHead>
-                  <TableHead className="min-w-[280px]">Reset Password</TableHead>
+                  <TableHead className="min-w-[280px]">Update Password</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -253,7 +253,7 @@ export default function UsersPage() {
                                 onChange={(e) => handlePasswordInputChange(user.id, e.target.value)}
                             />
                             <Button size="sm" onClick={() => handleForceReset(user.id, user.handle)}>
-                                Reset
+                                Update
                             </Button>
                         </div>
                       </TableCell>
