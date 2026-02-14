@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, onSnapshot, query, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Video } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -47,12 +47,18 @@ export default function DashboardPage() {
         toastShownRef.current = true;
     }
 
-    const usersUnsubscribe = onSnapshot(query(collection(db, 'users')), (snapshot) => {
-      setUserCount(snapshot.size);
-    }, (error) => {
-        console.error("Error with users listener:", error);
-        setUserCount(0);
-    });
+    const fetchUsers = async () => {
+        try {
+            const snapshot = await getDocs(collection(db, 'users'));
+            setUserCount(snapshot.size);
+            console.log('Found users:', snapshot.docs.map(doc => doc.data()));
+        } catch (error) {
+            console.error("Error fetching users:", error);
+            setUserCount(0);
+        }
+    };
+
+    fetchUsers();
 
     const videosUnsubscribe = onSnapshot(query(collection(db, 'videos')), (snapshot) => {
       setVideoCount(snapshot.size);
@@ -62,7 +68,6 @@ export default function DashboardPage() {
     });
 
     return () => {
-      usersUnsubscribe();
       videosUnsubscribe();
     };
   }, [toast]);
