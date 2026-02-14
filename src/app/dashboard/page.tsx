@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, getDocs } from 'firebase/firestore';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { collection, onSnapshot, query, getDocs, where, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Users, Video } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from "@/hooks/use-toast";
+import { Button } from '@/components/ui/button';
 
 type StatCardProps = {
   title: string;
@@ -35,6 +36,7 @@ function StatCard({ title, count, icon: Icon }: StatCardProps) {
 export default function DashboardPage() {
   const [userCount, setUserCount] = useState<number | null>(null);
   const [videoCount, setVideoCount] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const toastShownRef = useRef(false);
 
@@ -72,6 +74,57 @@ export default function DashboardPage() {
     };
   }, [toast]);
 
+  const handleForceFollow = async () => {
+    setLoading(true);
+    toast({
+      title: "ਕਾਰਵਾਈ ਚੱਲ ਰਹੀ ਹੈ...",
+      description: "ਸਾਰੇ ਯੂਜ਼ਰਸ ਨੂੰ @gloverse ਦਾ ਸਬਸਕ੍ਰਾਈਬਰ ਬਣਾਇਆ ਜਾ ਰਿਹਾ ਹੈ।",
+    });
+
+    try {
+      // 1. Find @gloverse user
+      const gloverseQuery = query(collection(db, "channels"), where("handle", "==", "gloverse"));
+      const gloverseSnapshot = await getDocs(gloverseQuery);
+
+      if (gloverseSnapshot.empty) {
+        throw new Error("@gloverse ਯੂਜ਼ਰ 'channels' ਕਲੈਕਸ਼ਨ ਵਿੱਚ ਨਹੀਂ ਮਿਲਿਆ।");
+      }
+      const gloverseId = gloverseSnapshot.docs[0].id;
+      
+      // 2. Get all users
+      const allUsersSnapshot = await getDocs(collection(db, "channels"));
+      
+      // 3. Update each user
+      const updatePromises = allUsersSnapshot.docs.map(userDoc => {
+        if (userDoc.id === gloverseId) {
+          return Promise.resolve();
+        }
+        const userRef = doc(db, "channels", userDoc.id);
+        return updateDoc(userRef, {
+          subscriptions: arrayUnion(gloverseId)
+        });
+      });
+      
+      await Promise.all(updatePromises);
+      
+      toast({
+        title: "ਸਫ਼ਲਤਾਪੂਰਵਕ ਹੋ ਗਿਆ!",
+        description: `ਸਾਰੇ ${allUsersSnapshot.size - 1} ਯੂਜ਼ਰਸ ਹੁਣ @gloverse ਨੂੰ ਫਾਲੋ ਕਰਦੇ ਹਨ।`,
+      });
+
+    } catch (error: any) {
+      console.error("Force follow ਵਿੱਚ ਗਲਤੀ:", error);
+      toast({
+        variant: "destructive",
+        title: "ਇੱਕ ਗਲਤੀ ਆਈ ਹੈ।",
+        description: error.message || "ਇਹ ਕਾਰਵਾਈ ਪੂਰੀ ਨਹੀਂ ਹੋ ਸਕੀ।",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
   return (
     <div className="space-y-8">
       <div className="hidden md:block">
@@ -81,6 +134,23 @@ export default function DashboardPage() {
         <StatCard title="Total Users" count={userCount} icon={Users} />
         <StatCard title="Total Videos" count={videoCount} icon={Video} />
       </div>
+      <Card className="border border-primary bg-card shadow-lg shadow-primary/5">
+        <CardHeader>
+          <CardTitle>Founder Tools</CardTitle>
+          <CardDescription>ਗੁਪਤ ਐਕਸ਼ਨ, ਸਿਰਫ਼ ਫਾਊਂਡਰ ਲਈ।</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold">Force Follow Official</h3>
+              <p className="text-sm text-muted-foreground">ਸਾਰੇ ਯੂਜ਼ਰਸ ਨੂੰ @gloverse ਚੈਨਲ ਦਾ ਸਬਸਕ੍ਰਾਈਬਰ ਬਣਾਓ।</p>
+            </div>
+            <Button onClick={handleForceFollow} disabled={loading} variant="destructive">
+              {loading ? 'ਪ੍ਰੋਸੈਸਿੰਗ...' : 'Force Follow'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
