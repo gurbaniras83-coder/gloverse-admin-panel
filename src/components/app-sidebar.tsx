@@ -12,7 +12,7 @@ const navItems = [
   { href: '/dashboard/users', label: 'GloStars', icon: Users },
   { href: '/dashboard/content', label: 'Videos', icon: PlaySquare },
   { href: '/dashboard/payouts', label: 'Revenue', icon: IndianRupee },
-  { href: '/dashboard/ads-manager', label: 'Ads Manager', icon: Megaphone },
+  { href: '/dashboard/ads-manager', label: 'Ad Requests', icon: Megaphone },
 ];
 
 export default function AppSidebar() {
