@@ -10,6 +10,17 @@ import { useToast } from "@/hooks/use-toast";
 import { Eye, Trash2, Star, Video as VideoIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type Video = {
   id: string;
@@ -65,8 +76,6 @@ export default function ContentPage() {
   }, [toast]);
 
   const handleDelete = async (video: Video) => {
-    if (!confirm(`Are you sure you want to delete "${video.title || 'Untitled Video'}"?`)) return;
-
     try {
       await deleteDoc(doc(db, 'videos', video.id));
       toast({
@@ -144,10 +153,26 @@ export default function ContentPage() {
                                     <Star className="h-4 w-4 mr-2" />
                                     {video.isFeatured ? 'Unfeature' : 'Feature'}
                                 </Button>
-                                <Button variant="destructive" size="sm" onClick={() => handleDelete(video)}>
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete
-                                </Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="sm">
+                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            Delete
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                This action cannot be undone. This will permanently delete the video "{video.title || 'Untitled Video'}".
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleDelete(video)}>Delete</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
                             </CardFooter>
                         </Card>
                     ))}

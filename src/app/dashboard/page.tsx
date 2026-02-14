@@ -75,7 +75,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <StatCard title="Total Users" count={userCount} icon={Users} />
         <StatCard title="Total Videos" count={videoCount} icon={Video} />
       </div>

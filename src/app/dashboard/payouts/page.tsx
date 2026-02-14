@@ -130,7 +130,7 @@ export default function PayoutsPage() {
     <div className="space-y-8">
       <h1 className="text-3xl font-bold tracking-tight">Monetization & Payout Desk</h1>
       
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <StatCard title="Total Platform Revenue" value={totalRevenue} icon={CircleDollarSign} loading={loadingRevenue} />
       </div>
 
