@@ -1,15 +1,14 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, doc, updateDoc, increment } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, increment, getDocs, documentId } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, CircleDollarSign, Wallet } from "lucide-react";
+import { Check, X, CircleDollarSign, ShieldCheck } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 
@@ -23,6 +22,16 @@ type PayoutRequest = {
   upiId?: string;
   bankDetails?: any;
 };
+
+type PaymentRequest = {
+  id: string; // Document ID from payment_requests
+  advertiserId: string;
+  amount: number;
+  transactionId: string;
+  handle?: string;
+  fullName?: string;
+  profilePictureUrl?: string;
+}
 
 function StatCard({ title, value, icon: Icon, loading }: { title: string, value: number | null, icon: React.ElementType, loading: boolean }) {
     return (
@@ -46,12 +55,15 @@ function StatCard({ title, value, icon: Icon, loading }: { title: string, value:
 
 export default function PayoutsPage() {
   const [requests, setRequests] = useState<PayoutRequest[]>([]);
+  const [paymentRequests, setPaymentRequests] = useState<PaymentRequest[]>([]);
   const [totalRevenue, setTotalRevenue] = useState<number | null>(null);
   const [loadingRequests, setLoadingRequests] = useState(true);
+  const [loadingPayments, setLoadingPayments] = useState(true);
   const [loadingRevenue, setLoadingRevenue] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
+    // Listener for creator payout requests
     const requestsQuery = query(collection(db, 'channels'), where('payoutRequested', '==', true));
     const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
       const requestsData = snapshot.docs.map((doc) => ({
@@ -66,6 +78,35 @@ export default function PayoutsPage() {
       setLoadingRequests(false);
     });
 
+    // Listener for advertiser payment verification requests
+    const paymentsQuery = query(collection(db, 'payment_requests'), where('status', '==', 'Pending'));
+    const unsubscribePayments = onSnapshot(paymentsQuery, async (snapshot) => {
+      const paymentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PaymentRequest));
+      
+      if (paymentsData.length > 0) {
+        const advertiserIds = [...new Set(paymentsData.map(p => p.advertiserId))];
+        const channelsQuery = query(collection(db, 'channels'), where(documentId(), 'in', advertiserIds));
+        const channelsSnapshot = await getDocs(channelsQuery);
+        const channelsMap = new Map(channelsSnapshot.docs.map(doc => [doc.id, doc.data()]));
+
+        const combinedData = paymentsData.map(req => ({
+          ...req,
+          handle: channelsMap.get(req.advertiserId)?.handle,
+          fullName: channelsMap.get(req.advertiserId)?.fullName,
+          profilePictureUrl: channelsMap.get(req.advertiserId)?.profilePictureUrl,
+        }));
+        setPaymentRequests(combinedData);
+      } else {
+        setPaymentRequests([]);
+      }
+      setLoadingPayments(false);
+    }, (error) => {
+        console.error("Error fetching payment requests:", error);
+        toast({ variant: "destructive", title: "Error", description: "Failed to fetch payment requests." });
+        setLoadingPayments(false);
+    });
+
+    // Listener for total revenue analytics
     const analyticsQuery = query(collection(db, 'analytics'));
     const unsubscribeAnalytics = onSnapshot(analyticsQuery, (snapshot) => {
         let total = 0;
@@ -83,10 +124,11 @@ export default function PayoutsPage() {
     return () => {
         unsubscribeRequests();
         unsubscribeAnalytics();
+        unsubscribePayments();
     };
   }, [toast]);
 
-  const handleApprove = async (request: PayoutRequest) => {
+  const handleApprovePayout = async (request: PayoutRequest) => {
     const userRef = doc(db, 'channels', request.id);
     const amountToPay = request.payoutRequestAmount || 0;
 
@@ -108,7 +150,7 @@ export default function PayoutsPage() {
     }
   };
 
-  const handleReject = async (request: PayoutRequest) => {
+  const handleRejectPayout = async (request: PayoutRequest) => {
     const userRef = doc(db, 'channels', request.id);
     try {
       await updateDoc(userRef, {
@@ -121,20 +163,122 @@ export default function PayoutsPage() {
       toast({ variant: "destructive", title: "Error", description: "Could not reject payout." });
     }
   };
+
+  const handleApprovePayment = async (payment: PaymentRequest) => {
+    const advertiserRef = doc(db, 'channels', payment.advertiserId);
+    const paymentRequestRef = doc(db, 'payment_requests', payment.id);
+    try {
+      await updateDoc(advertiserRef, {
+        walletBalance: increment(payment.amount)
+      });
+      await updateDoc(paymentRequestRef, {
+        status: 'Success'
+      });
+      toast({ title: "Payment Approved", description: `Wallet balance updated for @${payment.handle}.` });
+    } catch (error) {
+       console.error("Error approving payment:", error);
+       toast({ variant: "destructive", title: "Error", description: "Could not approve payment." });
+    }
+  };
+
+  const handleRejectPayment = async (payment: PaymentRequest) => {
+    const paymentRequestRef = doc(db, 'payment_requests', payment.id);
+    try {
+      await updateDoc(paymentRequestRef, {
+        status: 'Rejected'
+      });
+      toast({ title: "Payment Rejected", description: `Payment from @${payment.handle} has been rejected.` });
+    } catch (error) {
+        console.error("Error rejecting payment:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not reject payment." });
+    }
+  };
   
   const getInitials = (name?: string) => {
     return name?.split(' ').map(n => n[0]).join('').toUpperCase() || '';
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 pb-20">
       <div className="hidden md:block">
-        <h1 className="text-3xl font-bold tracking-tight">Monetization & Payout Desk</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Monetization &amp; Payout Desk</h1>
       </div>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <StatCard title="Total Platform Revenue" value={totalRevenue} icon={CircleDollarSign} loading={loadingRevenue} />
       </div>
+
+      <Card className="border border-primary bg-card shadow-lg shadow-primary/5">
+        <CardHeader>
+          <CardTitle>Payment Verification</CardTitle>
+          <CardDescription>Verify incoming payments from advertisers. {paymentRequests.length} pending.</CardDescription>
+        </CardHeader>
+        <CardContent>
+           <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Advertiser</TableHead>
+                  <TableHead>Transaction ID</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                 {loadingPayments ? (
+                  Array.from({ length: 2 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><div className="flex flex-col gap-1"><Skeleton className="h-4 w-24" /><Skeleton className="h-3 w-16" /></div></div></TableCell>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell className="text-right"><Skeleton className="h-4 w-12" /></TableCell>
+                      <TableCell><div className="flex justify-end gap-2"><Skeleton className="h-8 w-8 rounded-md" /><Skeleton className="h-8 w-8 rounded-md" /></div></TableCell>
+                    </TableRow>
+                  ))
+                ) : paymentRequests.length > 0 ? (
+                  paymentRequests.map((req) => (
+                    <TableRow key={req.id}>
+                       <TableCell>
+                        <div className="flex items-center gap-3">
+                            <Avatar>
+                                <AvatarImage src={req.profilePictureUrl} alt={req.fullName} />
+                                <AvatarFallback>{getInitials(req.fullName)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                                <div className="font-medium">{req.fullName || 'N/A'}</div>
+                                <div className="text-sm text-muted-foreground">@{req.handle || 'N/A'}</div>
+                            </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="font-mono">{req.transactionId}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {req.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                      </TableCell>
+                       <TableCell className="text-right">
+                        <div className="flex justify-end gap-1 sm:gap-2">
+                          <Button variant="ghost" size="icon" onClick={() => handleApprovePayment(req)} title="Approve Payment">
+                            <Check className="h-4 w-4 text-green-500" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleRejectPayment(req)} title="Reject Payment">
+                            <X className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                   <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                      No pending payment requests to verify.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+           </div>
+        </CardContent>
+      </Card>
 
       <Card className="border border-primary bg-card shadow-lg shadow-primary/5">
         <CardHeader>
@@ -194,10 +338,10 @@ export default function PayoutsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1 sm:gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleApprove(request)} title="Approve Payout">
+                          <Button variant="ghost" size="icon" onClick={() => handleApprovePayout(request)} title="Approve Payout">
                             <Check className="h-4 w-4 text-green-500" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleReject(request)} title="Reject Payout">
+                          <Button variant="ghost" size="icon" onClick={() => handleRejectPayout(request)} title="Reject Payout">
                             <X className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
@@ -218,6 +362,4 @@ export default function PayoutsPage() {
       </Card>
     </div>
   );
-
-    
-
+}
