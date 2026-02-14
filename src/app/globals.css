@@ -41,6 +41,8 @@ body {
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 0 0% 14.9%;
     --sidebar-ring: 51 100% 50%;
+    --verified: 210 100% 50%;
+    --verified-foreground: 0 0% 98%;
   }
   .dark {
     --background: 0 0% 4%;
@@ -75,6 +77,8 @@ body {
     --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 0 0% 14.9%;
     --sidebar-ring: 51 100% 50%;
+    --verified: 210 100% 50%;
+    --verified-foreground: 0 0% 98%;
   }
 }
 
