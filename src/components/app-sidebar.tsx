@@ -16,7 +16,7 @@ import { logout } from '@/app/actions';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/dashboard/glostars', label: 'Users', icon: Users },
+  { href: '/dashboard/users', label: 'Users', icon: Users },
   { href: '/dashboard/content', label: 'Content', icon: Video },
   { href: '/dashboard/payouts', label: 'Payouts', icon: CircleDollarSign },
   { href: '/dashboard/ads-manager', label: 'Ads Manager', icon: Megaphone },
