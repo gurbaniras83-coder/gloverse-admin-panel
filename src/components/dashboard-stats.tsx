@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, getCountFromServer } from 'firebase/firestore';
+import { collection, onSnapshot, query, getCountFromServer, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Video } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
@@ -39,8 +39,8 @@ export function DashboardStats() {
     const fetchCounts = async () => {
       try {
         const usersCol = collection(db, 'users');
-        const usersSnapshot = await getCountFromServer(usersCol);
-        setUserCount(usersSnapshot.data().count);
+        const usersSnapshot = await getDocs(usersCol);
+        setUserCount(usersSnapshot.size);
 
         const videosCol = collection(db, 'videos');
         const videosSnapshot = await getCountFromServer(videosCol);
