@@ -4,7 +4,6 @@ import { useEffect, useState, useMemo } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, updateDoc, type Timestamp } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,11 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Check, Gavel, KeyRound } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 type User = {
   id: string;
@@ -24,6 +28,28 @@ type User = {
   createdAt?: Timestamp;
   password?: string;
 };
+
+function UserCardSkeleton() {
+    return (
+        <div className="rounded-lg border p-3">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <Skeleton className="h-9 w-9 rounded-full" />
+                    <div>
+                        <Skeleton className="h-4 w-24 mb-1" />
+                        <Skeleton className="h-3 w-16" />
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                    <Skeleton className="h-8 w-8" />
+                    <Skeleton className="h-8 w-8" />
+                    <Skeleton className="h-8 w-8" />
+                </div>
+            </div>
+        </div>
+    )
+}
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -143,17 +169,6 @@ export default function UsersPage() {
     return name?.split(' ').map(n => n[0]).join('').toUpperCase() || '';
   }
 
-  const formatDate = (timestamp: Timestamp | undefined) => {
-    if (!timestamp) return 'N/A';
-    try {
-        // Firestore Timestamps can be converted to JS Date objects
-        return timestamp.toDate().toLocaleDateString();
-    } catch (e) {
-        // if it's already a string or something else.
-        return 'N/A';
-    }
-  }
-
   return (
     <div className="space-y-8">
        <div className="hidden md:block">
@@ -174,101 +189,64 @@ export default function UsersPage() {
               className="pl-10"
             />
           </div>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[200px]">User</TableHead>
-                  <TableHead className="hidden sm:table-cell">Email</TableHead>
-                  <TableHead className="hidden md:table-cell">Join Date</TableHead>
-                  <TableHead className="hidden sm:table-cell">Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                  <TableHead className="min-w-[280px]">Update Password</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i}>
-                      <TableCell>
+
+          <div className="space-y-3 pb-20">
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => <UserCardSkeleton key={i} />)
+            ) : filteredUsers.length > 0 ? (
+              filteredUsers.map((user) => (
+                <Collapsible key={user.id} asChild>
+                  <div className="rounded-lg border bg-card/50 p-3 text-sm transition-all hover:bg-card">
+                    <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <Skeleton className="h-10 w-10 rounded-full" />
-                          <div>
-                            <Skeleton className="h-4 w-24 mb-1" />
-                            <Skeleton className="h-3 w-16" />
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-32" /></TableCell>
-                      <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
-                      <TableCell className="hidden sm:table-cell"><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Skeleton className="h-9 w-9 rounded-md" />
-                          <Skeleton className="h-9 w-9 rounded-md" />
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                            <Skeleton className="h-9 w-full" />
-                            <Skeleton className="h-9 w-20" />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : filteredUsers.length > 0 ? (
-                  filteredUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                            <Avatar>
-                            <AvatarImage src={user.profilePictureUrl} alt={user.fullName} />
-                            <AvatarFallback>{getInitials(user.fullName)}</AvatarFallback>
+                            <Avatar className="h-9 w-9">
+                                <AvatarImage src={user.profilePictureUrl} alt={user.fullName} />
+                                <AvatarFallback>{getInitials(user.fullName)}</AvatarFallback>
                             </Avatar>
                             <div>
-                                <div className="font-medium">{user.fullName || 'N/A'}</div>
-                                <div className="text-sm text-muted-foreground">@{user.handle || 'N/A'}</div>
+                                <div className="font-semibold text-foreground">{user.fullName || 'N/A'}</div>
+                                <div className="text-primary">@{user.handle || 'N/A'}</div>
                             </div>
                         </div>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">{user.email || 'N/A'}</TableCell>
-                      <TableCell className="hidden md:table-cell">{formatDate(user.createdAt)}</TableCell>
-                      <TableCell className="hidden sm:table-cell">{getStatus(user)}</TableCell>
-                      <TableCell>
-                        <div className="flex justify-start gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => handleVerify(user)} title="Verify User">
-                            <Check className={`h-4 w-4 ${user.isVerified ? 'text-verified' : 'text-muted-foreground'}`} />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleBan(user)} title="Ban User">
-                            <Gavel className={`h-4 w-4 ${user.isBanned ? 'text-destructive' : 'text-muted-foreground'}`} />
-                          </Button>
+                        <div className="flex items-center gap-1">
+                            {getStatus(user)}
+                            <Button variant="ghost" size="icon" onClick={() => handleVerify(user)} title="Verify">
+                                <Check className={`h-4 w-4 ${user.isVerified ? 'text-verified' : 'text-muted-foreground'}`} />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleBan(user)} title="Ban">
+                                <Gavel className={`h-4 w-4 ${user.isBanned ? 'text-destructive' : 'text-muted-foreground'}`} />
+                            </Button>
+                            <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="icon" title="Reset Password">
+                                    <KeyRound className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                            </CollapsibleTrigger>
                         </div>
-                      </TableCell>
-                      <TableCell>
+                    </div>
+                    <CollapsibleContent className="mt-4">
                         <div className="flex items-center gap-2">
                             <Input 
                                 type="password" 
                                 placeholder="New Password"
                                 value={passwords[user.id] || ''}
                                 onChange={(e) => handlePasswordInputChange(user.id, e.target.value)}
+                                className="h-9"
                             />
                             <Button size="sm" onClick={() => handleForceReset(user.id, user.handle)}>
                                 Update
                             </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      No users found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                    </CollapsibleContent>
+                  </div>
+                </Collapsible>
+              ))
+            ) : (
+              <div className="py-24 text-center text-muted-foreground">
+                  No users found.
+              </div>
+            )}
           </div>
+
         </CardContent>
       </Card>
     </div>
