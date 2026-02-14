@@ -181,7 +181,7 @@ export default function UsersPage() {
                   <TableHead className="hidden md:table-cell">Join Date</TableHead>
                   <TableHead className="hidden sm:table-cell">Status</TableHead>
                   <TableHead>Actions</TableHead>
-                  <TableHead className="min-w-[280px]">Password Reset</TableHead>
+                  <TableHead className="min-w-[280px]">Update Password</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -251,8 +251,7 @@ export default function UsersPage() {
                                 onChange={(e) => handlePasswordInputChange(user.id, e.target.value)}
                             />
                             <Button size="sm" onClick={() => handleForceReset(user.id, user.handle)}>
-                                <KeyRound className="h-4 w-4 md:mr-2"/> 
-                                <span className="hidden md:inline">Force Reset</span>
+                                Update Password
                             </Button>
                         </div>
                       </TableCell>
