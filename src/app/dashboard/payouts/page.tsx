@@ -26,7 +26,7 @@ type PayoutRequest = {
 
 function StatCard({ title, value, icon: Icon, loading }: { title: string, value: number | null, icon: React.ElementType, loading: boolean }) {
     return (
-        <Card className="border-primary/20 bg-card shadow-lg shadow-primary/5">
+        <Card className="border border-primary bg-card shadow-lg shadow-primary/5">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
                 <Icon className="h-5 w-5 text-primary" />
@@ -128,13 +128,15 @@ export default function PayoutsPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight">Monetization & Payout Desk</h1>
+      <div className="hidden md:block">
+        <h1 className="text-3xl font-bold tracking-tight">Monetization & Payout Desk</h1>
+      </div>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <StatCard title="Total Platform Revenue" value={totalRevenue} icon={CircleDollarSign} loading={loadingRevenue} />
       </div>
 
-      <Card className="border-primary/20 bg-card shadow-lg shadow-primary/5">
+      <Card className="border border-primary bg-card shadow-lg shadow-primary/5">
         <CardHeader>
           <CardTitle>Pending Payout Requests</CardTitle>
           <CardDescription>Review and process payout requests from GloStars. {requests.length} pending.</CardDescription>

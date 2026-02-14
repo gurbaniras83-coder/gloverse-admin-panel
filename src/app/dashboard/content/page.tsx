@@ -111,8 +111,10 @@ export default function ContentPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight">Content Hub</h1>
-      <Card className="border-primary/20 bg-card shadow-lg shadow-primary/5">
+       <div className="hidden md:block">
+        <h1 className="text-3xl font-bold tracking-tight">Content Hub</h1>
+      </div>
+      <Card className="border border-primary bg-card shadow-lg shadow-primary/5">
         <CardHeader>
           <CardTitle>Video Moderation</CardTitle>
           <CardDescription>Review, feature, and manage all user-generated videos. {videos.length > 0 && `Found ${videos.length} videos.`}</CardDescription>

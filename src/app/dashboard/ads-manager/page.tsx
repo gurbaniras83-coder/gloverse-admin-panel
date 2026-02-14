@@ -4,8 +4,10 @@ import { Megaphone } from "lucide-react";
 export default function AdsManagerPage() {
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight">Ads Manager</h1>
-      <Card className="border-primary/20 bg-card shadow-lg shadow-primary/5">
+      <div className="hidden md:block">
+        <h1 className="text-3xl font-bold tracking-tight">Ads Manager</h1>
+      </div>
+      <Card className="border border-primary bg-card shadow-lg shadow-primary/5">
         <CardHeader>
           <CardTitle>Campaign Management</CardTitle>
           <CardDescription>Manage ad campaigns, track performance, and optimize strategies.</CardDescription>

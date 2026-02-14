@@ -16,7 +16,7 @@ type StatCardProps = {
 
 function StatCard({ title, count, icon: Icon }: StatCardProps) {
   return (
-    <Card className="border-primary/20 bg-card shadow-lg shadow-primary/5">
+    <Card className="border border-primary bg-card shadow-lg shadow-primary/5">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
         <Icon className="h-5 w-5 text-primary" />
@@ -74,7 +74,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+      <div className="hidden md:block">
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <StatCard title="Total Users" count={userCount} icon={Users} />
         <StatCard title="Total Videos" count={videoCount} icon={Video} />
