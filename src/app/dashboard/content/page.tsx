@@ -7,7 +7,7 @@ import { collection, onSnapshot, doc, deleteDoc, updateDoc } from 'firebase/fire
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, Trash2, Star } from 'lucide-react';
+import { Eye, Trash2, Star, Video as VideoIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 
@@ -119,7 +119,7 @@ export default function ContentPage() {
                         <Card key={video.id} className="flex flex-col overflow-hidden">
                              <div className="relative aspect-video bg-muted">
                                 {video.thumbnailUrl ? (
-                                    <Image src={video.thumbnailUrl} alt={video.title || 'Video thumbnail'} layout="fill" objectFit="cover" />
+                                    <Image src={video.thumbnailUrl} alt={video.title || 'Video thumbnail'} fill className="object-cover" />
                                 ) : (
                                     <div className="flex h-full w-full items-center justify-center text-muted-foreground">No Thumbnail</div>
                                 )}
@@ -154,7 +154,7 @@ export default function ContentPage() {
                 </div>
             ) : (
                 <div className="flex flex-col items-center justify-center space-y-4 p-16 text-center">
-                    <Video className="h-16 w-16 text-muted-foreground" />
+                    <VideoIcon className="h-16 w-16 text-muted-foreground" />
                     <p className="text-muted-foreground">No videos found in the collection.</p>
                 </div>
             )}
