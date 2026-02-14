@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, Trash2, Star } from 'lucide-react';
@@ -65,21 +65,13 @@ export default function ContentPage() {
   }, [toast]);
 
   const handleDelete = async (video: Video) => {
-    if (!confirm(`Are you sure you want to delete "${video.title}"?`)) return;
+    if (!confirm(`Are you sure you want to delete "${video.title || 'Untitled Video'}"?`)) return;
 
     try {
       await deleteDoc(doc(db, 'videos', video.id));
       toast({
-        title: "Video Deleted",
-        description: `"${video.title}" has been removed from Firestore.`,
+        title: 'Content Removed from GloVerse',
       });
-      if (video.public_id) {
-        toast({
-            title: "Action Required",
-            description: `Please ensure the video file (public_id: ${video.public_id}) is deleted from your storage provider.`,
-            duration: 9000,
-        });
-      }
     } catch (error) {
       console.error("Error deleting video:", error);
       toast({
@@ -162,7 +154,7 @@ export default function ContentPage() {
                 </div>
             ) : (
                 <div className="flex flex-col items-center justify-center space-y-4 p-16 text-center">
-                    <video className="h-16 w-16 text-muted-foreground" />
+                    <Video className="h-16 w-16 text-muted-foreground" />
                     <p className="text-muted-foreground">No videos found in the collection.</p>
                 </div>
             )}
