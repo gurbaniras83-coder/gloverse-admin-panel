@@ -85,18 +85,27 @@ export default function PayoutsPage() {
       const paymentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PaymentRequest));
       
       if (paymentsData.length > 0) {
-        const advertiserIds = [...new Set(paymentsData.map(p => p.advertiserId))];
-        const channelsQuery = query(collection(db, 'channels'), where(documentId(), 'in', advertiserIds));
-        const channelsSnapshot = await getDocs(channelsQuery);
-        const channelsMap = new Map(channelsSnapshot.docs.map(doc => [doc.id, doc.data()]));
+        // Filter out requests with no advertiserId to prevent query errors
+        const validAdvertiserIds = [...new Set(paymentsData.map(p => p.advertiserId).filter(Boolean) as string[])];
+        let channelsMap = new Map();
 
-        const combinedData = paymentsData.map(req => ({
-          ...req,
-          handle: channelsMap.get(req.advertiserId)?.handle,
-          fullName: channelsMap.get(req.advertiserId)?.fullName,
-          profilePictureUrl: channelsMap.get(req.advertiserId)?.profilePictureUrl,
-          email: channelsMap.get(req.advertiserId)?.email,
-        }));
+        // Only query for channels if we have valid advertiser IDs
+        if (validAdvertiserIds.length > 0) {
+            const channelsQuery = query(collection(db, 'channels'), where(documentId(), 'in', validAdvertiserIds));
+            const channelsSnapshot = await getDocs(channelsQuery);
+            channelsMap = new Map(channelsSnapshot.docs.map(doc => [doc.id, doc.data()]));
+        }
+
+        const combinedData = paymentsData.map(req => {
+          const advertiserInfo = req.advertiserId ? channelsMap.get(req.advertiserId) : null;
+          return {
+            ...req,
+            handle: advertiserInfo?.handle,
+            fullName: advertiserInfo?.fullName,
+            profilePictureUrl: advertiserInfo?.profilePictureUrl,
+            email: advertiserInfo?.email,
+          }
+        });
         setPaymentRequests(combinedData);
       } else {
         setPaymentRequests([]);
@@ -246,7 +255,7 @@ export default function PayoutsPage() {
                                 <AvatarFallback>{getInitials(req.fullName)}</AvatarFallback>
                             </Avatar>
                             <div>
-                                <div className="font-medium">{req.fullName || 'N/A'}</div>
+                                <div className="font-medium">{req.fullName || 'Unknown Advertiser'}</div>
                                 <div className="text-sm text-muted-foreground">{req.email || `@${req.handle}` || 'N/A'}</div>
                             </div>
                         </div>
@@ -365,5 +374,3 @@ export default function PayoutsPage() {
     </div>
   );
 }
-
-    
