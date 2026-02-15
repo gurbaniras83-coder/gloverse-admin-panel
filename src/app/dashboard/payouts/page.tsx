@@ -179,8 +179,8 @@ export default function PayoutsPage() {
     if (!payment.advertiserId) {
       toast({
         variant: "destructive",
-        title: "Error: Advertiser ID missing",
-        description: "This request is invalid and cannot be approved.",
+        title: "Cannot approve: Missing Advertiser ID.",
+        description: "Please delete this request.",
       });
       return;
     }
@@ -201,14 +201,14 @@ export default function PayoutsPage() {
     }
   };
 
-  const handleRejectPayment = async (payment: PaymentRequest) => {
+  const handleDeletePayment = async (payment: PaymentRequest) => {
     const paymentRequestRef = doc(db, 'payment_requests', payment.id);
     try {
       await deleteDoc(paymentRequestRef);
-      toast({ title: "Payment Rejected", description: `The payment request from @${payment.handle} has been deleted.` });
+      toast({ title: "Request Deleted", description: `The payment request from @${payment.handle} has been deleted.` });
     } catch (error) {
-        console.error("Error rejecting payment:", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not reject the payment request." });
+        console.error("Error deleting payment request:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not delete the payment request." });
     }
   };
   
@@ -278,7 +278,7 @@ export default function PayoutsPage() {
                           <Button variant="ghost" size="icon" onClick={() => handleApprovePayment(req)} title="Approve Payment">
                             <Check className="h-4 w-4 text-green-500" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleRejectPayment(req)} title="Reject & Delete Request">
+                          <Button variant="ghost" size="icon" onClick={() => handleDeletePayment(req)} title="Delete Request">
                             <X className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
