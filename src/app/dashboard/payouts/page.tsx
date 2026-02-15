@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, doc, updateDoc, increment, getDocs, documentId } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, increment, getDocs, documentId, deleteDoc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -176,6 +176,15 @@ export default function PayoutsPage() {
   };
 
   const handleApprovePayment = async (payment: PaymentRequest) => {
+    if (!payment.advertiserId) {
+      toast({
+        variant: "destructive",
+        title: "Error: Advertiser ID missing",
+        description: "This request is invalid and cannot be approved.",
+      });
+      return;
+    }
+
     const advertiserRef = doc(db, 'channels', payment.advertiserId);
     const paymentRequestRef = doc(db, 'payment_requests', payment.id);
     try {
@@ -188,20 +197,18 @@ export default function PayoutsPage() {
       toast({ title: "Payment Approved", description: `Wallet balance updated for @${payment.handle}.` });
     } catch (error) {
        console.error("Error approving payment:", error);
-       toast({ variant: "destructive", title: "Error", description: "Could not approve payment." });
+       toast({ variant: "destructive", title: "Error approving payment", description: "Could not approve payment. The advertiser might not exist." });
     }
   };
 
   const handleRejectPayment = async (payment: PaymentRequest) => {
     const paymentRequestRef = doc(db, 'payment_requests', payment.id);
     try {
-      await updateDoc(paymentRequestRef, {
-        status: 'Rejected'
-      });
-      toast({ title: "Payment Rejected", description: `Payment from @${payment.handle} has been rejected.` });
+      await deleteDoc(paymentRequestRef);
+      toast({ title: "Payment Rejected", description: `The payment request from @${payment.handle} has been deleted.` });
     } catch (error) {
         console.error("Error rejecting payment:", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not reject payment." });
+        toast({ variant: "destructive", title: "Error", description: "Could not reject the payment request." });
     }
   };
   
@@ -264,14 +271,14 @@ export default function PayoutsPage() {
                         <Badge variant="secondary" className="font-mono">{req.transactionId}</Badge>
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        {req.amount.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}
+                        {(req.amount ?? 0).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}
                       </TableCell>
                        <TableCell className="text-right">
                         <div className="flex justify-end gap-1 sm:gap-2">
                           <Button variant="ghost" size="icon" onClick={() => handleApprovePayment(req)} title="Approve Payment">
                             <Check className="h-4 w-4 text-green-500" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleRejectPayment(req)} title="Reject Payment">
+                          <Button variant="ghost" size="icon" onClick={() => handleRejectPayment(req)} title="Reject & Delete Request">
                             <X className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
