@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 export const metadata: Metadata = {
   title: 'GloVerse HQ',
   description: 'Founder Command Center for GloVerse',
+  robots: 'noindex, nofollow',
 };
 
 export default function RootLayout({

@@ -47,7 +47,7 @@ export default function LoginPage() {
                 id="email"
                 name="email"
                 type="email"
-                placeholder="gurbaniras83@gmail.com"
+                placeholder="founder@gloverse.com"
                 required
               />
             </div>
