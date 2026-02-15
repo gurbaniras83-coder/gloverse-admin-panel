@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, CircleDollarSign, ShieldCheck } from "lucide-react";
+import { Check, X, IndianRupee, ShieldCheck } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 
@@ -31,6 +31,7 @@ type PaymentRequest = {
   handle?: string;
   fullName?: string;
   profilePictureUrl?: string;
+  email?: string;
 }
 
 function StatCard({ title, value, icon: Icon, loading }: { title: string, value: number | null, icon: React.ElementType, loading: boolean }) {
@@ -45,7 +46,7 @@ function StatCard({ title, value, icon: Icon, loading }: { title: string, value:
                     <Skeleton className="h-8 w-24" />
                 ) : (
                     <div className="text-2xl font-bold">
-                        {value?.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                        {value?.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}
                     </div>
                 )}
             </CardContent>
@@ -94,6 +95,7 @@ export default function PayoutsPage() {
           handle: channelsMap.get(req.advertiserId)?.handle,
           fullName: channelsMap.get(req.advertiserId)?.fullName,
           profilePictureUrl: channelsMap.get(req.advertiserId)?.profilePictureUrl,
+          email: channelsMap.get(req.advertiserId)?.email,
         }));
         setPaymentRequests(combinedData);
       } else {
@@ -143,7 +145,7 @@ export default function PayoutsPage() {
         payoutStatus: 'Paid',
         payoutRequested: false,
       });
-      toast({ title: "Success", description: `Payout of ${amountToPay.toLocaleString('en-US', { style: 'currency', currency: 'USD' })} approved for @${request.handle}.` });
+      toast({ title: "Success", description: `Payout of ${amountToPay.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })} approved for @${request.handle}.` });
     } catch (error) {
       console.error("Error approving payout:", error);
       toast({ variant: "destructive", title: "Error", description: "Could not approve payout." });
@@ -205,7 +207,7 @@ export default function PayoutsPage() {
       </div>
       
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <StatCard title="Total Platform Revenue" value={totalRevenue} icon={CircleDollarSign} loading={loadingRevenue} />
+        <StatCard title="Total Platform Revenue" value={totalRevenue} icon={IndianRupee} loading={loadingRevenue} />
       </div>
 
       <Card className="border border-primary bg-card shadow-lg shadow-primary/5">
@@ -245,7 +247,7 @@ export default function PayoutsPage() {
                             </Avatar>
                             <div>
                                 <div className="font-medium">{req.fullName || 'N/A'}</div>
-                                <div className="text-sm text-muted-foreground">@{req.handle || 'N/A'}</div>
+                                <div className="text-sm text-muted-foreground">{req.email || `@${req.handle}` || 'N/A'}</div>
                             </div>
                         </div>
                       </TableCell>
@@ -253,7 +255,7 @@ export default function PayoutsPage() {
                         <Badge variant="secondary" className="font-mono">{req.transactionId}</Badge>
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        {req.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                        {req.amount.toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}
                       </TableCell>
                        <TableCell className="text-right">
                         <div className="flex justify-end gap-1 sm:gap-2">
@@ -324,7 +326,7 @@ export default function PayoutsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        {request.payoutRequestAmount?.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) ?? '$0.00'}
+                        {request.payoutRequestAmount?.toLocaleString('en-IN', { style: 'currency', currency: 'INR' }) ?? '₹0.00'}
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
                         {request.upiId ? (
@@ -334,7 +336,7 @@ export default function PayoutsPage() {
                         )}
                       </TableCell>
                       <TableCell className="hidden sm:table-cell text-right text-muted-foreground">
-                        {request.walletBalance?.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) ?? '$0.00'}
+                        {request.walletBalance?.toLocaleString('en-IN', { style: 'currency', currency: 'INR' }) ?? '₹0.00'}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1 sm:gap-2">
@@ -363,3 +365,5 @@ export default function PayoutsPage() {
     </div>
   );
 }
+
+    
