@@ -179,8 +179,8 @@ export default function PayoutsPage() {
     if (!payment.advertiserId) {
       toast({
         variant: "destructive",
-        title: "Cannot approve: Missing Advertiser ID.",
-        description: "Please delete this request.",
+        title: "Invalid Request",
+        description: "This request is missing an Advertiser ID. Please delete it.",
       });
       return;
     }
@@ -197,7 +197,11 @@ export default function PayoutsPage() {
       toast({ title: "Payment Approved", description: `Wallet balance updated for @${payment.handle}.` });
     } catch (error) {
        console.error("Error approving payment:", error);
-       toast({ variant: "destructive", title: "Error approving payment", description: "Could not approve payment. The advertiser might not exist." });
+       toast({ 
+         variant: "destructive", 
+         title: "Error Approving Payment", 
+         description: "Could not approve payment. The advertiser might not exist in the 'channels' collection." 
+        });
     }
   };
 
@@ -205,7 +209,7 @@ export default function PayoutsPage() {
     const paymentRequestRef = doc(db, 'payment_requests', payment.id);
     try {
       await deleteDoc(paymentRequestRef);
-      toast({ title: "Request Deleted", description: `The payment request from @${payment.handle} has been deleted.` });
+      toast({ title: "Request Deleted", description: `The payment request from @${payment.handle || 'an unknown user'} has been deleted.` });
     } catch (error) {
         console.error("Error deleting payment request:", error);
         toast({ variant: "destructive", title: "Error", description: "Could not delete the payment request." });
@@ -381,3 +385,5 @@ export default function PayoutsPage() {
     </div>
   );
 }
+
+    
