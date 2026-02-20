@@ -20,6 +20,7 @@ import {
 type Advertiser = {
   id: string;
   businessName?: string;
+  handle?: string;
   email?: string;
   profilePictureUrl?: string;
   walletBalance?: number;
@@ -53,7 +54,7 @@ export default function AdvertisersPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    const advertisersCol = collection(db, 'advertisers_data');
+    const advertisersCol = collection(db, 'advertisers_accounts');
     const unsubscribe = onSnapshot(advertisersCol, (snapshot) => {
       const advertisersData = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -91,7 +92,7 @@ export default function AdvertisersPage() {
       return;
     }
 
-    const advertiserRef = doc(db, 'advertisers_data', advertiser.id);
+    const advertiserRef = doc(db, 'advertisers_accounts', advertiser.id);
     try {
       await updateDoc(advertiserRef, { 
         walletBalance: increment(bonusAmount)
@@ -116,9 +117,11 @@ export default function AdvertisersPage() {
     if (!searchQuery) {
       return advertisers;
     }
+    const lowercasedQuery = searchQuery.toLowerCase();
     return advertisers.filter(advertiser =>
-      advertiser.businessName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      advertiser.email?.toLowerCase().includes(searchQuery.toLowerCase())
+      advertiser.businessName?.toLowerCase().includes(lowercasedQuery) ||
+      advertiser.email?.toLowerCase().includes(lowercasedQuery) ||
+      advertiser.handle?.toLowerCase().includes(lowercasedQuery)
     );
   }, [advertisers, searchQuery]);
 
@@ -140,7 +143,7 @@ export default function AdvertisersPage() {
           <div className="mb-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
-              placeholder="Search by Business Name or Email..."
+              placeholder="Search by Business Name, @handle, or Email..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -162,7 +165,8 @@ export default function AdvertisersPage() {
                             </Avatar>
                             <div>
                                 <div className="font-semibold text-foreground">{advertiser.businessName || 'N/A'}</div>
-                                <div className="text-muted-foreground">{advertiser.email || 'N/A'}</div>
+                                <div className="text-sm text-primary">@{advertiser.handle || 'N/A'}</div>
+                                <div className="text-xs text-muted-foreground">{advertiser.email || 'N/A'}</div>
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
