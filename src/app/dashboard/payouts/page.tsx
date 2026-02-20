@@ -21,7 +21,6 @@ type PaymentRequest = {
   status?: 'Pending' | 'Approved' | 'Rejected';
   businessName?: string;
   profilePictureUrl?: string;
-  email?: string;
 };
 
 export default function PayoutsPage() {
@@ -34,34 +33,7 @@ export default function PayoutsPage() {
     
     const unsubscribe = onSnapshot(paymentsQuery, async (snapshot) => {
       const paymentsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PaymentRequest));
-      
-      if (paymentsData.length > 0) {
-        const validAdvertiserIds = [...new Set(paymentsData.map(p => p.advertiserId).filter(Boolean) as string[])];
-        let advertisersMap = new Map();
-
-        if (validAdvertiserIds.length > 0) {
-            try {
-                const advertisersQuery = query(collection(db, 'advertisers_data'), where(documentId(), 'in', validAdvertiserIds));
-                const advertisersSnapshot = await getDocs(advertisersQuery);
-                advertisersMap = new Map(advertisersSnapshot.docs.map(doc => [doc.id, doc.data()]));
-            } catch (e) {
-                console.error("Could not fetch advertiser details", e);
-            }
-        }
-
-        const combinedData = paymentsData.map(req => {
-          const advertiserInfo = req.advertiserId ? advertisersMap.get(req.advertiserId) : null;
-          return {
-            ...req,
-            businessName: advertiserInfo?.businessName,
-            profilePictureUrl: advertiserInfo?.profilePictureUrl,
-            email: advertiserInfo?.email,
-          }
-        });
-        setPaymentRequests(combinedData);
-      } else {
-        setPaymentRequests([]);
-      }
+      setPaymentRequests(paymentsData);
       setLoadingPayments(false);
     }, (error) => {
         console.error("Error fetching payment requests:", error);
@@ -82,7 +54,7 @@ export default function PayoutsPage() {
       return;
     }
 
-    const advertiserRef = doc(db, 'advertisers_data', payment.advertiserId);
+    const advertiserRef = doc(db, 'advertisers_accounts', payment.advertiserId);
     const paymentRequestRef = doc(db, 'payment_requests', payment.id);
     
     try {
