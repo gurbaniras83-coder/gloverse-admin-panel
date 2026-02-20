@@ -26,6 +26,7 @@ type PaymentRequest = {
 export default function PayoutsPage() {
   const [paymentRequests, setPaymentRequests] = useState<PaymentRequest[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(true);
+  const [processingId, setProcessingId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -45,6 +46,16 @@ export default function PayoutsPage() {
   }, [toast]);
 
   const handleApprovePayment = async (payment: PaymentRequest) => {
+    if (processingId) return;
+
+    if (payment.status === 'Approved') {
+      toast({
+        title: "Already Approved",
+        description: "This payment has already been processed.",
+      });
+      return;
+    }
+
     if (!payment.advertiserId) {
       toast({
         variant: "destructive",
@@ -54,6 +65,7 @@ export default function PayoutsPage() {
       return;
     }
 
+    setProcessingId(payment.id);
     const advertiserRef = doc(db, 'advertisers_accounts', payment.advertiserId);
     const paymentRequestRef = doc(db, 'payment_requests', payment.id);
     
@@ -64,7 +76,7 @@ export default function PayoutsPage() {
       await updateDoc(paymentRequestRef, {
         status: 'Approved'
       });
-      toast({ title: "Payment Approved! Wallet Updated.", description: `${payment.businessName || payment.advertiserId} has been credited.` });
+      toast({ title: "Payment Finalized", description: "Wallet Updated once." });
     } catch (error) {
        console.error("Error approving payment:", error);
        toast({ 
@@ -72,10 +84,14 @@ export default function PayoutsPage() {
          title: "Error Approving Payment", 
          description: "Could not approve payment. The advertiser might not exist or another error occurred." 
         });
+    } finally {
+      setProcessingId(null);
     }
   };
 
   const handleDeleteRequest = async (payment: PaymentRequest) => {
+    if (processingId) return;
+    setProcessingId(payment.id);
     const paymentRequestRef = doc(db, 'payment_requests', payment.id);
     try {
       await deleteDoc(paymentRequestRef);
@@ -83,6 +99,8 @@ export default function PayoutsPage() {
     } catch (error) {
         console.error("Error deleting payment request:", error);
         toast({ variant: "destructive", title: "Error", description: "Could not delete the payment request." });
+    } finally {
+      setProcessingId(null);
     }
   };
   
@@ -148,11 +166,11 @@ export default function PayoutsPage() {
                       </TableCell>
                        <TableCell className="text-center">
                         <div className="flex justify-center gap-2">
-                          <Button onClick={() => handleApprovePayment(req)} size="default" className="bg-green-600 hover:bg-green-700 text-white font-bold">
-                              <Check className="mr-2 h-5 w-5" /> ACCEPT
+                          <Button onClick={() => handleApprovePayment(req)} size="default" className="bg-green-600 hover:bg-green-700 text-white font-bold" disabled={processingId === req.id}>
+                              {processingId === req.id ? 'Processing...' : <><Check className="mr-2 h-5 w-5" /> ACCEPT</>}
                           </Button>
-                          <Button onClick={() => handleDeleteRequest(req)} size="default" variant="destructive" className="font-bold">
-                              <X className="mr-2 h-5 w-5" /> DELETE
+                          <Button onClick={() => handleDeleteRequest(req)} size="default" variant="destructive" className="font-bold" disabled={processingId === req.id}>
+                              {processingId === req.id ? '...' : <><X className="mr-2 h-5 w-5" /> DELETE</>}
                           </Button>
                         </div>
                       </TableCell>
