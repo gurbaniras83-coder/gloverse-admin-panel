@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, doc, updateDoc, increment, getDocs, documentId, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, increment, getDocs, documentId } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, IndianRupee, ShieldCheck } from "lucide-react";
+import { Check, X, IndianRupee } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 
@@ -28,8 +28,7 @@ type PaymentRequest = {
   advertiserId: string;
   amount: number;
   transactionId: string;
-  handle?: string;
-  fullName?: string;
+  businessName?: string;
   profilePictureUrl?: string;
   email?: string;
 }
@@ -87,21 +86,20 @@ export default function PayoutsPage() {
       if (paymentsData.length > 0) {
         // Filter out requests with no advertiserId to prevent query errors
         const validAdvertiserIds = [...new Set(paymentsData.map(p => p.advertiserId).filter(Boolean) as string[])];
-        let channelsMap = new Map();
+        let advertisersMap = new Map();
 
-        // Only query for channels if we have valid advertiser IDs
+        // Only query for advertisers if we have valid advertiser IDs
         if (validAdvertiserIds.length > 0) {
-            const channelsQuery = query(collection(db, 'channels'), where(documentId(), 'in', validAdvertiserIds));
-            const channelsSnapshot = await getDocs(channelsQuery);
-            channelsMap = new Map(channelsSnapshot.docs.map(doc => [doc.id, doc.data()]));
+            const advertisersQuery = query(collection(db, 'advertisers_data'), where(documentId(), 'in', validAdvertiserIds));
+            const advertisersSnapshot = await getDocs(advertisersQuery);
+            advertisersMap = new Map(advertisersSnapshot.docs.map(doc => [doc.id, doc.data()]));
         }
 
         const combinedData = paymentsData.map(req => {
-          const advertiserInfo = req.advertiserId ? channelsMap.get(req.advertiserId) : null;
+          const advertiserInfo = req.advertiserId ? advertisersMap.get(req.advertiserId) : null;
           return {
             ...req,
-            handle: advertiserInfo?.handle,
-            fullName: advertiserInfo?.fullName,
+            businessName: advertiserInfo?.businessName,
             profilePictureUrl: advertiserInfo?.profilePictureUrl,
             email: advertiserInfo?.email,
           }
@@ -180,39 +178,39 @@ export default function PayoutsPage() {
       toast({
         variant: "destructive",
         title: "Invalid Request",
-        description: "This request is missing an Advertiser ID. Please delete it.",
+        description: "This request is missing an Advertiser ID. Please decline it.",
       });
       return;
     }
 
-    const advertiserRef = doc(db, 'channels', payment.advertiserId);
+    const advertiserRef = doc(db, 'advertisers_data', payment.advertiserId);
     const paymentRequestRef = doc(db, 'payment_requests', payment.id);
     try {
       await updateDoc(advertiserRef, {
         walletBalance: increment(payment.amount)
       });
       await updateDoc(paymentRequestRef, {
-        status: 'Success'
+        status: 'Approved'
       });
-      toast({ title: "Payment Approved", description: `Wallet balance updated for @${payment.handle}.` });
+      toast({ title: "Payment Approved", description: `Wallet balance updated for ${payment.businessName}.` });
     } catch (error) {
        console.error("Error approving payment:", error);
        toast({ 
          variant: "destructive", 
          title: "Error Approving Payment", 
-         description: "Could not approve payment. The advertiser might not exist in the 'channels' collection." 
+         description: "Could not approve payment. The advertiser might not exist in the 'advertisers_data' collection." 
         });
     }
   };
 
-  const handleDeletePayment = async (payment: PaymentRequest) => {
+  const handleDeclinePayment = async (payment: PaymentRequest) => {
     const paymentRequestRef = doc(db, 'payment_requests', payment.id);
     try {
-      await deleteDoc(paymentRequestRef);
-      toast({ title: "Request Deleted", description: `The payment request from @${payment.handle || 'an unknown user'} has been deleted.` });
+      await updateDoc(paymentRequestRef, { status: 'Declined' });
+      toast({ title: "Request Declined", description: `The payment request from ${payment.businessName || 'an unknown user'} has been declined.` });
     } catch (error) {
-        console.error("Error deleting payment request:", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not delete the payment request." });
+        console.error("Error declining payment request:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not decline the payment request." });
     }
   };
   
@@ -253,7 +251,7 @@ export default function PayoutsPage() {
                       <TableCell><div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><div className="flex flex-col gap-1"><Skeleton className="h-4 w-24" /><Skeleton className="h-3 w-16" /></div></div></TableCell>
                       <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                       <TableCell className="text-right"><Skeleton className="h-4 w-12" /></TableCell>
-                      <TableCell><div className="flex justify-end gap-2"><Skeleton className="h-8 w-8 rounded-md" /><Skeleton className="h-8 w-8 rounded-md" /></div></TableCell>
+                      <TableCell><div className="flex justify-end gap-2"><Skeleton className="h-9 w-24 rounded-md" /><Skeleton className="h-9 w-24 rounded-md" /></div></TableCell>
                     </TableRow>
                   ))
                 ) : paymentRequests.length > 0 ? (
@@ -262,12 +260,12 @@ export default function PayoutsPage() {
                        <TableCell>
                         <div className="flex items-center gap-3">
                             <Avatar>
-                                <AvatarImage src={req.profilePictureUrl} alt={req.fullName} />
-                                <AvatarFallback>{getInitials(req.fullName)}</AvatarFallback>
+                                <AvatarImage src={req.profilePictureUrl} alt={req.businessName} />
+                                <AvatarFallback>{getInitials(req.businessName)}</AvatarFallback>
                             </Avatar>
                             <div>
-                                <div className="font-medium">{req.fullName || 'Unknown Advertiser'}</div>
-                                <div className="text-sm text-muted-foreground">{req.email || `@${req.handle}` || 'N/A'}</div>
+                                <div className="font-medium">{req.businessName || 'Unknown Advertiser'}</div>
+                                <div className="text-sm text-muted-foreground">{req.email || 'N/A'}</div>
                             </div>
                         </div>
                       </TableCell>
@@ -278,12 +276,12 @@ export default function PayoutsPage() {
                         {(req.amount ?? 0).toLocaleString('en-IN', { style: 'currency', currency: 'INR' })}
                       </TableCell>
                        <TableCell className="text-right">
-                        <div className="flex justify-end gap-1 sm:gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleApprovePayment(req)} title="Approve Payment">
-                            <Check className="h-4 w-4 text-green-500" />
+                        <div className="flex justify-end gap-2">
+                          <Button onClick={() => handleApprovePayment(req)} size="sm" className="bg-green-600 hover:bg-green-700 text-primary-foreground">
+                              ACCEPT
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeletePayment(req)} title="Delete Request">
-                            <X className="h-4 w-4 text-destructive" />
+                          <Button onClick={() => handleDeclinePayment(req)} size="sm" variant="destructive">
+                              DECLINE
                           </Button>
                         </div>
                       </TableCell>
@@ -385,5 +383,3 @@ export default function PayoutsPage() {
     </div>
   );
 }
-
-    
