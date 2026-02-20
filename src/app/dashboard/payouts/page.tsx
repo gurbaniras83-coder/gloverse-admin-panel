@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, where, doc, updateDoc, increment, getDocs, documentId } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc, increment, getDocs, documentId, deleteDoc } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -15,8 +15,10 @@ import { Badge } from '@/components/ui/badge';
 type PaymentRequest = {
   id: string; // Document ID from payment_requests
   advertiserId: string;
+  advertiserHandle?: string;
   amount: number;
   transactionId: string;
+  status?: 'Pending' | 'Approved' | 'Rejected';
   businessName?: string;
   profilePictureUrl?: string;
   email?: string;
@@ -75,7 +77,7 @@ export default function PayoutsPage() {
       toast({
         variant: "destructive",
         title: "Invalid Request",
-        description: "Cannot approve: Missing Advertiser ID. Please decline this request.",
+        description: "Cannot approve: Missing Advertiser ID. Please delete this request.",
       });
       return;
     }
@@ -101,14 +103,14 @@ export default function PayoutsPage() {
     }
   };
 
-  const handleDeclinePayment = async (payment: PaymentRequest) => {
+  const handleDeleteRequest = async (payment: PaymentRequest) => {
     const paymentRequestRef = doc(db, 'payment_requests', payment.id);
     try {
-      await updateDoc(paymentRequestRef, { status: 'Rejected' });
-      toast({ title: "Request Rejected", description: `The payment request from ${payment.businessName || 'an unknown user'} has been rejected.` });
+      await deleteDoc(paymentRequestRef);
+      toast({ title: "Request Deleted", description: `The payment request has been removed.` });
     } catch (error) {
-        console.error("Error rejecting payment request:", error);
-        toast({ variant: "destructive", title: "Error", description: "Could not reject the payment request." });
+        console.error("Error deleting payment request:", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not delete the payment request." });
     }
   };
   
@@ -161,8 +163,8 @@ export default function PayoutsPage() {
                                 <AvatarFallback>{getInitials(req.businessName)}</AvatarFallback>
                             </Avatar>
                             <div>
-                                <div className="font-medium">{req.businessName || 'Unknown Advertiser'}</div>
-                                <div className="text-sm text-primary">@{req.advertiserId}</div>
+                                <div className="font-medium">{req.businessName || 'Unknown Business'}</div>
+                                <div className="text-sm text-primary">@{req.advertiserHandle || req.advertiserId}</div>
                             </div>
                         </div>
                       </TableCell>
@@ -177,8 +179,8 @@ export default function PayoutsPage() {
                           <Button onClick={() => handleApprovePayment(req)} size="default" className="bg-green-600 hover:bg-green-700 text-white font-bold">
                               <Check className="mr-2 h-5 w-5" /> ACCEPT
                           </Button>
-                          <Button onClick={() => handleDeclinePayment(req)} size="default" variant="destructive" className="font-bold">
-                              <X className="mr-2 h-5 w-5" /> DECLINE
+                          <Button onClick={() => handleDeleteRequest(req)} size="default" variant="destructive" className="font-bold">
+                              <X className="mr-2 h-5 w-5" /> DELETE
                           </Button>
                         </div>
                       </TableCell>
