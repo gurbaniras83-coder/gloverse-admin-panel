@@ -16,6 +16,9 @@ import { cn } from '@/lib/utils';
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useState } from 'react';
@@ -69,6 +72,12 @@ export default function BottomNavBar() {
             </button>
           </SheetTrigger>
           <SheetContent side="bottom" className="rounded-t-2xl border-t-2 border-primary bg-black/80 p-0 text-foreground backdrop-blur-xl">
+            <SheetHeader className="sr-only">
+              <SheetTitle>More Navigation Options</SheetTitle>
+              <SheetDescription>
+                Contains links to Revenue, Ad Requests, and Advertisers pages.
+              </SheetDescription>
+            </SheetHeader>
             <div className="mx-auto my-3 h-1.5 w-12 rounded-full bg-muted-foreground/50" />
             <div className="grid grid-cols-3 gap-y-4 p-4 pb-6">
               {moreNavItems.map((item) => {
