@@ -31,7 +31,7 @@ const mainNavItems = [
 ];
 
 const moreNavItems = [
-  { href: '/dashboard/payouts', label: 'Revenue', icon: IndianRupee },
+  { href: '/dashboard/revenue', label: 'Revenue', icon: IndianRupee },
   { href: '/dashboard/ads-manager', label: 'Ad Requests', icon: Megaphone },
   { href: '/dashboard/advertisers', label: 'Advertisers', icon: Briefcase },
 ];
@@ -72,9 +72,9 @@ export default function BottomNavBar() {
             </button>
           </SheetTrigger>
           <SheetContent side="bottom" className="rounded-t-2xl border-t-2 border-primary bg-black/80 p-0 text-foreground backdrop-blur-xl">
-            <SheetHeader className="sr-only">
-              <SheetTitle>More Navigation Options</SheetTitle>
-              <SheetDescription>
+            <SheetHeader>
+              <SheetTitle className="sr-only">More Navigation Options</SheetTitle>
+              <SheetDescription className="sr-only">
                 Contains links to Revenue, Ad Requests, and Advertisers pages.
               </SheetDescription>
             </SheetHeader>

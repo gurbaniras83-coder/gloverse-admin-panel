@@ -12,7 +12,7 @@ const navItems = [
   { href: '/dashboard/users', label: 'GloStars', icon: Users },
   { href: '/dashboard/content', label: 'Videos', icon: PlaySquare },
   { href: '/dashboard/monetization', label: 'Monetization', icon: CircleDollarSign },
-  { href: '/dashboard/payouts', label: 'Revenue', icon: IndianRupee },
+  { href: '/dashboard/revenue', label: 'Revenue', icon: IndianRupee },
   { href: '/dashboard/ads-manager', label: 'Ad Requests', icon: Megaphone },
   { href: '/dashboard/advertisers', label: 'Advertisers', icon: Briefcase },
 ];
