@@ -39,6 +39,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const toastShownRef = useRef(false);
+  const boostAppliedRef = useRef(false);
 
   useEffect(() => {
     if (db.app.options.projectId === 'gloverse-d94dc' && !toastShownRef.current) {
@@ -47,6 +48,29 @@ export default function DashboardPage() {
             description: "Successfully connected to the 'gloverse-d94dc' database.",
         });
         toastShownRef.current = true;
+    }
+
+    // Founder's one-time boost script
+    if (!boostAppliedRef.current) {
+      const boostFounderChannel = async () => {
+        const q = query(collection(db, "channels"), where("handle", "==", "gloverse"));
+        try {
+          const querySnapshot = await getDocs(q);
+          if (!querySnapshot.empty) {
+            const founderDoc = querySnapshot.docs[0];
+            await updateDoc(doc(db, 'channels', founderDoc.id), {
+              watchHours: 1000
+            });
+            console.log("Founder Channel @gloverse boosted to 1000 hours");
+          } else {
+            console.log("Founder channel @gloverse not found for boosting.");
+          }
+        } catch (error) {
+          console.error("Error boosting founder channel:", error);
+        }
+      };
+      boostFounderChannel();
+      boostAppliedRef.current = true;
     }
 
     const fetchUsers = async () => {
