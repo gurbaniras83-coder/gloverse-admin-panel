@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Check, Gavel, KeyRound } from "lucide-react";
+import { Search, Check, Gavel, KeyRound, Award, DollarSign } from "lucide-react";
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Collapsible,
@@ -29,6 +29,9 @@ type User = {
   createdAt?: Timestamp;
   password?: string;
   watchHours?: number;
+  subscribers?: number;
+  isMonetized?: boolean;
+  monetizationStatus?: 'pending' | 'approved' | 'rejected';
 };
 
 function UserCardSkeleton() {
@@ -118,6 +121,56 @@ export default function UsersPage() {
         });
     }
   };
+  
+  const handleCompleteCriteria = async (user: User) => {
+    const userRef = doc(db, 'channels', user.id);
+    try {
+      await updateDoc(userRef, {
+        subscribers: 500,
+        watchHours: 1000,
+      });
+      toast({
+        title: "Criteria Met!",
+        description: `@${user.handle}'s subscribers set to 500 and watch hours to 1000.`,
+      });
+    } catch (error) {
+      console.error("Error setting monetization criteria:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not update user criteria.",
+      });
+    }
+  };
+  
+  const handleMonetizeNow = async (user: User) => {
+    if (user.isMonetized) {
+        toast({
+            variant: 'default',
+            title: 'Already Monetized',
+            description: `@${user.handle} is already monetized.`,
+        });
+        return;
+    }
+    const userRef = doc(db, 'channels', user.id);
+    try {
+      await updateDoc(userRef, {
+        isMonetized: true,
+        monetizationStatus: 'approved',
+      });
+      toast({
+        title: "Monetization Activated!",
+        description: `@${user.handle} has been manually monetized.`,
+      });
+    } catch (error) {
+      console.error("Error monetizing user:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not directly monetize user.",
+      });
+    }
+};
 
   const handlePasswordInputChange = (userId: string, value: string) => {
     setPasswords(prev => ({...prev, [userId]: value}));
@@ -207,6 +260,7 @@ export default function UsersPage() {
 
   const getStatus = (user: User) => {
     if (user.isBanned) return <Badge variant="destructive">Banned</Badge>;
+    if (user.isMonetized) return <Badge className="bg-green-600 text-white hover:bg-green-700">Monetized</Badge>;
     if (user.isVerified) return <Badge className="bg-verified text-verified-foreground hover:bg-verified/90">Verified</Badge>;
     return <Badge variant="secondary">Active</Badge>;
   };
@@ -252,6 +306,9 @@ export default function UsersPage() {
                             <div>
                                 <div className="font-semibold text-foreground">{user.fullName || 'N/A'}</div>
                                 <div className="text-primary">@{user.handle || 'N/A'}</div>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                    {user.subscribers?.toLocaleString() ?? 0} subs &bull; {user.watchHours?.toLocaleString() ?? 0} watch hrs
+                                </div>
                             </div>
                         </div>
                         <div className="flex items-center gap-1">
@@ -270,6 +327,20 @@ export default function UsersPage() {
                         </div>
                     </div>
                     <CollapsibleContent className="mt-4 space-y-4">
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">Founder Controls</Label>
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                            <Button size="sm" variant="default" onClick={() => handleCompleteCriteria(user)}>
+                                <Award className="mr-2 h-4 w-4" />
+                                Complete Criteria
+                            </Button>
+                            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleMonetizeNow(user)} disabled={user.isMonetized}>
+                                <DollarSign className="mr-2 h-4 w-4" />
+                                {user.isMonetized ? 'Monetized' : 'Monetize Now'}
+                            </Button>
+                        </div>
+                      </div>
+                      <div className="border-b"></div>
                       <div>
                         <Label className="text-xs font-medium text-muted-foreground">Force Password Reset</Label>
                         <div className="flex items-center gap-2 mt-1">
