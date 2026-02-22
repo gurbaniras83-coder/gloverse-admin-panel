@@ -168,7 +168,7 @@ export default function UsersPage() {
       return;
     }
     
-    const hoursNumber = parseInt(hours, 10);
+    const hoursNumber = Number(hours);
     if (isNaN(hoursNumber) || hoursNumber < 0) {
       toast({
         variant: 'destructive',
