@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, doc, updateDoc, type Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, type Timestamp, query, where, getDocs } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -63,8 +63,33 @@ export default function UsersPage() {
   const [passwords, setPasswords] = useState<{[key: string]: string}>({});
   const [watchHours, setWatchHours] = useState<{ [key: string]: string }>({});
   const { toast } = useToast();
+  const boostAppliedRef = useRef(false);
 
   useEffect(() => {
+    // Official Boost Script - runs only once on component mount
+    if (!boostAppliedRef.current) {
+        const applyGloverseBoost = async () => {
+            const q = query(collection(db, "channels"), where("handle", "==", "gloverse"));
+            try {
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    const gloverseDoc = querySnapshot.docs[0];
+                    await updateDoc(doc(db, 'channels', gloverseDoc.id), {
+                        subscribers: 500,
+                        watchHours: 1000,
+                    });
+                    console.log("GloVerse channel criteria boosted successfully.");
+                } else {
+                    console.log("@gloverse channel not found for boosting.");
+                }
+            } catch (error) {
+                console.error("Error applying boost to @gloverse channel:", error);
+            }
+        };
+        applyGloverseBoost();
+        boostAppliedRef.current = true;
+    }
+
     const usersCol = collection(db, 'channels');
     const unsubscribe = onSnapshot(usersCol, (snapshot) => {
       const usersData = snapshot.docs.map((doc) => ({
@@ -143,34 +168,27 @@ export default function UsersPage() {
     }
   };
   
-  const handleMonetizeNow = async (user: User) => {
-    if (user.isMonetized) {
-        toast({
-            variant: 'default',
-            title: 'Already Monetized',
-            description: `@${user.handle} is already monetized.`,
-        });
-        return;
-    }
+  const handleToggleMonetization = async (user: User) => {
     const userRef = doc(db, 'channels', user.id);
+    const newIsMonetized = !user.isMonetized;
     try {
       await updateDoc(userRef, {
-        isMonetized: true,
-        monetizationStatus: 'approved',
+        isMonetized: newIsMonetized,
+        monetizationStatus: newIsMonetized ? 'approved' : 'rejected',
       });
       toast({
-        title: "Monetization Activated!",
-        description: `@${user.handle} has been manually monetized.`,
+        title: 'Success',
+        description: `@${user.handle} has been ${newIsMonetized ? 'monetized' : 'demonetized'}.`,
       });
     } catch (error) {
-      console.error("Error monetizing user:", error);
+      console.error("Error toggling monetization:", error);
       toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Could not directly monetize user.",
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not update monetization status.',
       });
     }
-};
+  };
 
   const handlePasswordInputChange = (userId: string, value: string) => {
     setPasswords(prev => ({...prev, [userId]: value}));
@@ -334,9 +352,14 @@ export default function UsersPage() {
                                 <Award className="mr-2 h-4 w-4" />
                                 Complete Criteria
                             </Button>
-                            <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleMonetizeNow(user)} disabled={user.isMonetized}>
-                                <DollarSign className="mr-2 h-4 w-4" />
-                                {user.isMonetized ? 'Monetized' : 'Monetize Now'}
+                            <Button
+                              size="sm"
+                              variant={user.isMonetized ? 'destructive' : 'default'}
+                              className={!user.isMonetized ? 'bg-green-600 hover:bg-green-700' : ''}
+                              onClick={() => handleToggleMonetization(user)}
+                            >
+                              <DollarSign className="mr-2 h-4 w-4" />
+                              {user.isMonetized ? 'Demonetize' : 'Monetize Now'}
                             </Button>
                         </div>
                       </div>
