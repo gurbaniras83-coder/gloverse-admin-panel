@@ -49,14 +49,12 @@ export default function RevenueDashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Assuming 'createdAt' and 'viewCount' fields exist on ad_campaigns for time-based calculations
     const campaignsQuery = query(collection(db, 'ad_campaigns'), where('status', '==', 'Active'));
     
     const unsubscribe = onSnapshot(campaignsQuery, (snapshot) => {
       const activeCampaigns = snapshot.docs
         .map(doc => {
             const data = doc.data();
-            // Gracefully handle documents that might be missing fields
             if (data.createdAt && data.createdAt.toDate && typeof data.viewCount === 'number') {
                  return {
                     id: doc.id,
@@ -87,32 +85,57 @@ export default function RevenueDashboardPage() {
   };
 
   const { today, last7Days, thisMonth, total, dailyRevenueData } = useMemo(() => {
+    const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+
+    const toIstDateString = (date: Date): string => {
+        const istDate = new Date(date.getTime() + IST_OFFSET);
+        const year = istDate.getUTCFullYear();
+        const month = String(istDate.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(istDate.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     const now = new Date();
-    const todayCutoff = subDays(now, 1);
-    const last7DaysCutoff = subDays(now, 7);
-    const thisMonthCutoff = startOfMonth(now);
+    const nowInIst = new Date(now.getTime() + IST_OFFSET);
+    
+    const istTodayStart = new Date(Date.UTC(nowInIst.getUTCFullYear(), nowInIst.getUTCMonth(), nowInIst.getUTCDate()));
+    const ist7DaysAgoStart = new Date(istTodayStart.getTime() - 6 * 24 * 60 * 60 * 1000);
+    const istMonthStart = new Date(Date.UTC(nowInIst.getUTCFullYear(), nowInIst.getUTCMonth(), 1));
+
+    const istTodayStartTime = istTodayStart.getTime();
+    const ist7DaysAgoStartTime = ist7DaysAgoStart.getTime();
+    const istMonthStartTime = istMonthStart.getTime();
 
     let today = 0;
     let last7Days = 0;
     let thisMonth = 0;
     let total = 0;
-
     const dailyRevenueMap = new Map<string, number>();
-    for (let i = 0; i < 28; i++) {
-        const date = format(subDays(now, i), 'yyyy-MM-dd');
-        dailyRevenueMap.set(date, 0);
+
+    for (let i = 27; i >= 0; i--) {
+        const date = subDays(now, i);
+        const dateStr = toIstDateString(date);
+        dailyRevenueMap.set(dateStr, 0);
     }
     
     campaigns.forEach(campaign => {
       const revenue = (campaign.viewCount || 0) * PLATFORM_SHARE_PER_VIEW;
-      const campaignDate = campaign.createdAt.toDate();
-      
       total += revenue;
-      if (isAfter(campaignDate, todayCutoff)) today += revenue;
-      if (isAfter(campaignDate, last7DaysCutoff)) last7Days += revenue;
-      if (isAfter(campaignDate, thisMonthCutoff)) thisMonth += revenue;
+      
+      const campaignTime = campaign.createdAt.toDate().getTime();
+      const campaignTimeInIst = campaignTime + IST_OFFSET;
+      
+      if (campaignTimeInIst >= istTodayStartTime) {
+          today += revenue;
+      }
+      if (campaignTimeInIst >= ist7DaysAgoStartTime) {
+          last7Days += revenue;
+      }
+      if (campaignTimeInIst >= istMonthStartTime) {
+          thisMonth += revenue;
+      }
 
-      const campaignDateStr = format(campaignDate, 'yyyy-MM-dd');
+      const campaignDateStr = toIstDateString(campaign.createdAt.toDate());
       if (dailyRevenueMap.has(campaignDateStr)) {
           dailyRevenueMap.set(campaignDateStr, dailyRevenueMap.get(campaignDateStr)! + revenue);
       }
@@ -139,15 +162,15 @@ export default function RevenueDashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Today's Earnings" value={formatCurrency(today)} icon={TrendingUp} loading={loading} />
-        <StatCard title="Last 7 Days" value={formatCurrency(last7Days)} icon={Calendar} loading={loading} />
-        <StatCard title="This Month" value={formatCurrency(thisMonth)} icon={Calendar} loading={loading} />
+        <StatCard title="Today's Earnings (IST)" value={formatCurrency(today)} icon={TrendingUp} loading={loading} />
+        <StatCard title="Last 7 Days (IST)" value={formatCurrency(last7Days)} icon={Calendar} loading={loading} />
+        <StatCard title="This Month (IST)" value={formatCurrency(thisMonth)} icon={Calendar} loading={loading} />
         <StatCard title="Total Platform Revenue" value={formatCurrency(total)} icon={IndianRupee} loading={loading} />
       </div>
 
       <Card className="border-primary/50 bg-card shadow-lg shadow-primary/10">
         <CardHeader>
-          <CardTitle>Daily Revenue (Last 28 Days)</CardTitle>
+          <CardTitle>Daily Revenue (Last 28 Days, IST)</CardTitle>
           <CardDescription>Revenue generated each day from active ad campaigns.</CardDescription>
         </CardHeader>
         <CardContent className="h-[350px] w-full p-2">
