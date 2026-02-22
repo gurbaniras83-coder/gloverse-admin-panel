@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, Users, PlaySquare, IndianRupee, Megaphone, LogOut, Briefcase } from 'lucide-react';
+import { LayoutGrid, Users, PlaySquare, IndianRupee, Megaphone, LogOut, Briefcase, CircleDollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { logout } from '@/app/actions';
 import { Button } from './ui/button';
@@ -11,6 +11,7 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
   { href: '/dashboard/users', label: 'GloStars', icon: Users },
   { href: '/dashboard/content', label: 'Videos', icon: PlaySquare },
+  { href: '/dashboard/monetization', label: 'Monetization', icon: CircleDollarSign },
   { href: '/dashboard/payouts', label: 'Revenue', icon: IndianRupee },
   { href: '/dashboard/ads-manager', label: 'Ad Requests', icon: Megaphone },
   { href: '/dashboard/advertisers', label: 'Advertisers', icon: Briefcase },

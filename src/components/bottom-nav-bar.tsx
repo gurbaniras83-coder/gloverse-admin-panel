@@ -2,16 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, Users, PlaySquare, IndianRupee, Megaphone, Briefcase } from 'lucide-react';
+import { LayoutGrid, Users, PlaySquare, IndianRupee, Megaphone, Briefcase, CircleDollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
   { href: '/dashboard/users', label: 'GloStars', icon: Users },
   { href: '/dashboard/content', label: 'Videos', icon: PlaySquare },
+  { href: '/dashboard/monetization', label: 'Monetization', icon: CircleDollarSign },
   { href: '/dashboard/payouts', label: 'Revenue', icon: IndianRupee },
   { href: '/dashboard/ads-manager', label: 'Ads', icon: Megaphone },
-  { href: '/dashboard/advertisers', label: 'Advertisers', icon: Briefcase },
 ];
 
 export default function BottomNavBar() {
