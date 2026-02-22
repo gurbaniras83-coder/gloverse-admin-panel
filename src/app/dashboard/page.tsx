@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, query, getDocs, where, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, onSnapshot, query, getDocs, where, doc, updateDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Users, Video } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -74,50 +74,46 @@ export default function DashboardPage() {
     };
   }, [toast]);
 
-  const handleForceFollow = async () => {
+  const handleSyncSubscribers = async () => {
     setLoading(true);
     toast({
-      title: "ਕਾਰਵਾਈ ਚੱਲ ਰਹੀ ਹੈ...",
-      description: "ਸਾਰੇ ਯੂਜ਼ਰਸ ਨੂੰ @gloverse ਦਾ ਸਬਸਕ੍ਰਾਈਬਰ ਬਣਾਇਆ ਜਾ ਰਿਹਾ ਹੈ।",
+      title: "Syncing Subscribers...",
+      description: "Calculating and updating subscriber count for @gloverse.",
     });
 
     try {
-      // 1. Find @gloverse user
+      // 1. Find @gloverse user's UID
       const gloverseQuery = query(collection(db, "channels"), where("handle", "==", "gloverse"));
       const gloverseSnapshot = await getDocs(gloverseQuery);
 
       if (gloverseSnapshot.empty) {
-        throw new Error("@gloverse ਯੂਜ਼ਰ 'channels' ਕਲੈਕਸ਼ਨ ਵਿੱਚ ਨਹੀਂ ਮਿਲਿਆ।");
+        throw new Error("@gloverse user not found in 'channels' collection.");
       }
-      const gloverseId = gloverseSnapshot.docs[0].id;
-      
-      // 2. Get all users
-      const allUsersSnapshot = await getDocs(collection(db, "channels"));
-      
-      // 3. Update each user
-      const updatePromises = allUsersSnapshot.docs.map(userDoc => {
-        if (userDoc.id === gloverseId) {
-          return Promise.resolve();
-        }
-        const userRef = doc(db, "channels", userDoc.id);
-        return updateDoc(userRef, {
-          subscriptions: arrayUnion(gloverseId)
-        });
+      const gloverseId = gloverseSnapshot.docs[0].id; // This is the UID
+
+      // 2. Count documents in the 'subscriptions' collection where channelId matches
+      const subscriptionsQuery = query(collection(db, "subscriptions"), where("channelId", "==", gloverseId));
+      const subscriptionsSnapshot = await getDocs(subscriptionsQuery);
+      const subscriberCount = subscriptionsSnapshot.size;
+
+      // 3. Update the 'subscribers' field in the @gloverse channel document
+      const gloverseRef = doc(db, "channels", gloverseId);
+      await updateDoc(gloverseRef, {
+        subscribers: subscriberCount
       });
       
-      await Promise.all(updatePromises);
-      
+      // 4. Success message
       toast({
-        title: "ਸਫ਼ਲਤਾਪੂਰਵਕ ਹੋ ਗਿਆ!",
-        description: `ਸਾਰੇ ${allUsersSnapshot.size - 1} ਯੂਜ਼ਰਸ ਹੁਣ @gloverse ਨੂੰ ਫਾਲੋ ਕਰਦੇ ਹਨ।`,
+        title: "Sync Complete!",
+        description: `Subscriber count for @gloverse has been synced to ${subscriberCount}.`,
       });
 
     } catch (error: any) {
-      console.error("Force follow ਵਿੱਚ ਗਲਤੀ:", error);
+      console.error("Error syncing subscriber count:", error);
       toast({
         variant: "destructive",
-        title: "ਇੱਕ ਗਲਤੀ ਆਈ ਹੈ।",
-        description: error.message || "ਇਹ ਕਾਰਵਾਈ ਪੂਰੀ ਨਹੀਂ ਹੋ ਸਕੀ।",
+        title: "An error occurred.",
+        description: error.message || "Could not complete the sync operation.",
       });
     } finally {
       setLoading(false);
@@ -142,11 +138,11 @@ export default function DashboardPage() {
         <CardContent>
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-semibold">Force Follow Official</h3>
-              <p className="text-sm text-muted-foreground">ਸਾਰੇ ਯੂਜ਼ਰਸ ਨੂੰ @gloverse ਚੈਨਲ ਦਾ ਸਬਸਕ੍ਰਾਈਬਰ ਬਣਾਓ।</p>
+              <h3 className="font-semibold">Sync Subscriber Count</h3>
+              <p className="text-sm text-muted-foreground">Recalculate and update the subscriber count for the @gloverse channel.</p>
             </div>
-            <Button onClick={handleForceFollow} disabled={loading} variant="destructive">
-              {loading ? 'ਪ੍ਰੋਸੈਸਿੰਗ...' : 'Force Follow'}
+            <Button onClick={handleSyncSubscribers} disabled={loading} variant="destructive">
+              {loading ? 'Syncing...' : 'Sync Count'}
             </Button>
           </div>
         </CardContent>
