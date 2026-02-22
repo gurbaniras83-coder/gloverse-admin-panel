@@ -16,6 +16,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Label } from '@/components/ui/label';
 
 type User = {
   id: string;
@@ -27,6 +28,7 @@ type User = {
   email?: string;
   createdAt?: Timestamp;
   password?: string;
+  watchHours?: number;
 };
 
 function UserCardSkeleton() {
@@ -56,6 +58,7 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [passwords, setPasswords] = useState<{[key: string]: string}>({});
+  const [watchHours, setWatchHours] = useState<{ [key: string]: string }>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -120,6 +123,10 @@ export default function UsersPage() {
     setPasswords(prev => ({...prev, [userId]: value}));
   }
 
+  const handleWatchHoursInputChange = (userId: string, value: string) => {
+    setWatchHours(prev => ({ ...prev, [userId]: value }));
+  };
+
   const handleForceReset = async (userId: string, handle?: string) => {
     const newPassword = passwords[userId];
     if (!newPassword) {
@@ -146,6 +153,45 @@ export default function UsersPage() {
         variant: 'destructive',
         title: 'Error',
         description: 'Could not reset password.',
+      });
+    }
+  };
+
+  const handleSetWatchHours = async (userId: string, handle?: string) => {
+    const hours = watchHours[userId];
+    if (hours === undefined || hours.trim() === '') {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Input',
+        description: 'Please enter a value for watch hours.',
+      });
+      return;
+    }
+    
+    const hoursNumber = parseInt(hours, 10);
+    if (isNaN(hoursNumber) || hoursNumber < 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Input',
+        description: 'Please enter a valid non-negative number for watch hours.',
+      });
+      return;
+    }
+
+    const userRef = doc(db, 'channels', userId);
+    try {
+      await updateDoc(userRef, { watchHours: hoursNumber });
+      toast({
+        title: 'Success',
+        description: `Watch hours for @${handle} have been updated to ${hoursNumber}.`,
+      });
+      setWatchHours(prev => ({ ...prev, [userId]: '' }));
+    } catch (error) {
+      console.error("Error setting watch hours:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Could not update watch hours.',
       });
     }
   };
@@ -223,8 +269,10 @@ export default function UsersPage() {
                             </CollapsibleTrigger>
                         </div>
                     </div>
-                    <CollapsibleContent className="mt-4">
-                        <div className="flex items-center gap-2">
+                    <CollapsibleContent className="mt-4 space-y-4">
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">Force Password Reset</Label>
+                        <div className="flex items-center gap-2 mt-1">
                             <Input 
                                 type="password" 
                                 placeholder="New Password"
@@ -236,6 +284,22 @@ export default function UsersPage() {
                                 Update
                             </Button>
                         </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-muted-foreground">Set Watch Hours</Label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Input
+                            type="number"
+                            placeholder="Watch Hours"
+                            value={watchHours[user.id] || ''}
+                            onChange={(e) => handleWatchHoursInputChange(user.id, e.target.value)}
+                            className="h-9"
+                          />
+                          <Button variant="secondary" size="sm" onClick={() => handleSetWatchHours(user.id, user.handle)}>
+                            Set Hours
+                          </Button>
+                        </div>
+                      </div>
                     </CollapsibleContent>
                   </div>
                 </Collapsible>
